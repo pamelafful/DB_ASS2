@@ -76,3 +76,40 @@ Outputs: Total Pyment per user
 Mappers- will take each user/date combination as a key and output a payment value \<user-date, payment\>
 
 Then each reducer will take the each user-date key and its associated value the one reducer that will handle the summing of the payments for that pair.
+
+b\) Assuming the data is partitioned daily:
+
+Inputs:
+
+-   The data will be split across mappers in the form ((year, user) payment), \<year, user\> are the keys and payment is the value being mapped to.
+
+-   This will be distributed across mappers:
+
+    1.   Each mapper counts the payments per user for each month per year \<month,year,user\> and get the valu,e which in this case are the payments. For example if User 1 made 3 payments in 2024 ( Jan-5 ,Jan-10 and July-10 ), 2 in ( March-10, April -25) in 2025 , the corresponding outputs from the different mappers will be
+
+        -   Mapper 1 output \<(Jan,2024,user1)\> 15
+
+        -   Mapper 2 output \<(Jul, 2024, user1)\> 10
+
+        -   Mapper 2 output \<(Mar,2025, user1)\>10
+
+        -   Mapper 2 output \<Apr, 2025, user1\> 25
+
+    2.  These map outputs, for the different key combinations, are sent are then sent to the requisite reducers ( in two stages) that sum up the payments per user per year. In this case, each reducer may sum up the payments for each user across years. Using the same Users example:
+
+        -   Reducer 1 output \< (User1,2024)\>= 25
+
+        -   Reducer 2 output \<User1, 2025\>=35
+
+        -    Across all users per year 2024, and 2025
+
+    3.  The final ouput report will be a the sum of payments for each user per year for 2024 and 2025
+
+        | User ID | Year | Total Payment |
+        |---------|------|---------------|
+        | User1   | 2024 | 25            |
+        | User1   | 2025 | 35            |
+        | User n  | 2024 | xx            |
+        | User n  | 2025 | xx            |
+
+        : Final Output Table
