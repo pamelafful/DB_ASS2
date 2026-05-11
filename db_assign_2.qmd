@@ -1,71 +1,85 @@
 ---
-title: "Data Bases Design"
+title: "DataBase Design"
 author: "Pamela Afful"
 format: pdf
 editor: visual
 ---
 
-## Question 1
+## Question 1 - Relational Database Design
 
-a\) Entity Diagram
+a\) Entity Relationship Diagram
 
-![](images/clipboard-1580723832.png)b)
-
--   Research ( $\underline{\text{Research ID}}$ ,AUTHOR ID, Subject, Title, Publication Date, Research Typ
-
--   Authors ($\underline{\text{Author ID}}$ Title, DEPTID, Faculty)
-
--   Downloads ($\underline{\text{Download ID}}$, USER ID, Download Date, Download Fee)
-
--   Registered Users ( $\underline{\text{UserId}}$, DOWNLOAD ID, Name, Surname)
-
--   Faculty ( $\underline{\text{DeptID}}$, Department, Faculty Name)
-
-c\) Author ID==\>Author Name
-
-d\) A functional dependency helps determine new information in a row of data. Knowing about an ID A determines information about B, another attribute in the row.
-
-e\) AuthorID -\> Department
-
-f\) Think
-
-g\) Research ID has a many-to-many relation to User ID ( multiple Research IDs cand be downloaded by multiple users and vice versa). The relation is 3NF due to the lack of transitive dependencies/partial dependencies. \* comeback and explain why
-
-# Question 2
-
-a\) Fact Table candidates- Downloads (central table for which can track multiple attributes including download date, user, VookId, etc.), AuthorS could also be a fact table
+![](images/clipboard-4173552880.png)
 
 b\)
 
--   Downloads ( Download ID, Download Date, UserID, Research ID, Author ID)
+-   Research ( $\underline{\text{Research ID}}$ , AUTHOR ID, Subject, Title, Publication Date, Research Type)
 
--   Authors (AuthorID, Name, Surname, Faculty, Research Titles)
+-   Authors ($\underline{\text{Author ID}}$ , Author Full Name, Title, Faculty, RESEARCH ID, DEPT ID)
 
-c\) UCT Faculty- one-dimensional table that is slow changing.
+-   Downloads ($\underline{\text{Download ID}}$, USER ID, RESEARCH ID, Download Date, Download Fee)
+
+-   Registered Users ( $\underline{\text{UserId}}$, DOWNLOAD ID, Name, Surname)
+
+-   Faculty ( $\underline{\text{DeptID}}$, Department, Faculty Name, AUTHOR ID)
+
+c\) Author ID-\>Author Name
+
+d\) A functional dependency determines how the value of one (or more) attribute in a table or row is identified by knowing the value of another (key) attribute- known as the determinant.
+
+e\) RESEARCH ID-\> AUTHOR ID -\>Department
+
+f\) RESEARCH ID -\> Title
+
+g\) Research has a many-to-many relation to Registered Users: multiple Research IDs can be downloaded by multiple users and vice versa. The identification key in this case is composite as (Research ID, User ID), as this combination can uniquely identify each download.\
+\
+The relation is in 3NF, as every non-prime attribute of the Downloads, Download Date, and Download Fee tables can be uniquely identified by the (Research ID, User ID). Additionally, each non-prime download attribute can also be uniquely linked to via the Download ID primary key in the Downloads table.
+
+# Question 2- Data Warehouses
+
+a\)
+
+-    Downloads Fact Table can be a central table that can be used to track multiple KPIs, including user traffic, number of downloads, total fees paid, etc. These are numerical and quantifiable.
+
+-   Research Fact Table can also be used to track additional KPIs, such as the number of papers published in a given year, authors of interest that are related to the university, or a specific department. This can prove especially important if the main objective is to track faculty and departmental research output and interest.
+
+b\)
+
+-   Downloads ( $\underline{\text{Download ID}}$, USER ID, RESEARCH ID, Download Fees, Download Date)
+
+-   Research ( $\underline{\text{Research ID}}$, Titles, AUTHOR ID, Publication Date, Publication Type, ISBN)
+
+c\) UCT Faculty: one-dimensional table that is slow changing.
 
 d\) Faculty -\>Department. Faculties house multiple departments, which in this case form a hierarchy
 
 ```{SQL}
 SELECT Subject,ReasearchType,
 COUNT(ResearchID)
-GROUP BY CUBE (FacultyName, Department)
+FROM Fact_Research
+GROUP BY CUBE (Subject,ReasearchType)
 ```
 
-The above gives the number of authors per Subject-ResearchType combination as well as the number of Research Ids across Subjects alone and across Research Types (e.g book, paper, thesis) as well.
+The above gives the number of Research IDs per Subject-ResearchType combination as well as the number of Research IDs across Subjects alone and across Research Types (e.g book, paper, theses) as well.
 
-f\) The Research Type rows would disappear as this detail would be "rolled up" into the Subject totals, which form the hierarchy in this example.
+f\) The Research Type rows would disappear as this detail would be "rolled up" into the Subject totals, which form the hierarchy in this example.\*comeback
 
-# Question 3
+# Question 3- NoSQL
 
-a\) I would make use of a relational database to store easily definable attributes of research outputs. That would be for the Author and Research fact tables that relate to their respective dimension tables.
+a\) I would make use of a relational database to store easily definable and structured relationships between entities. An example of where this would be a table that relates authors to the various titles they published at various dates, their faculty or department, etc.
 
-b\) The key-value store should be a simple look up dictionary where the key instantly returns a value stored for that key. In this case. Given that the number of registered users would naturarally tend to grow much quicker relative to other datasets (given the popularity of the research platform) this would be what I would use to store user related information - ideally user names.
+b\) The key-value store should be a simple lookup dictionary where the key instantly returns a value stored for that key efficiently. In this case, I would use a key-value model to store AuthorID: Subject_Information. That is, each author id pulls up the subjects or field of expertise of that particular author. This is quite advantageous due to the fast-growing popularity and usage of the research platform- users need to be able to access information as swiftly as possible.
 
-c\) I would use the a document database to store the actual content of all the reasearch IDs; The research ID would be the key in this case. These databases are best for semi-structured data and as such would suit the various types of formats that research outputs can take.
+c\) I would use a document database to store the actual content of all the research ouputs; The research ID would be the document ID in this case. These databases are best for semi-structured data and, as such, would suit the various types of formats that research outputs can take. Since key attributes of the research IDs (title, author, subject, etc.) are stored in BSONs (allowing related information to be nested together), users can efficiently interact with specific parts of the text they want- without having to retrieve entire documents or use multiple joins.
 
-d\) I would use a column-oriented database to store Research ID interactions with respect to downloads, citations etc. make it easy to track and evaluate user analytics
+d\) I would use a column-oriented database to store Research ID interactions with respect to downloads, citations etc., making it easy to track and evaluate user analytics, as the space required to store and retrieve this information is much lower than in a traditional RDB
 
-e\) Authors and their collaborators that they have worked or cited in works- can be useful for tracking research similarity.
+e\) I would use a graph database to store authors-collaborator information, as well as cross-paper citation information that shows specific research in which authors have been cited in. This is especially useful for tracking research or author/field similarity, citation networks, significant authors, or research outputs, etc. This works better to capture the direction and relationships between various entities in the data than an RDB model.\
+In this case, the structure would be:\
+
+-   Node: Author ID, Research ID
+
+-   Edges: Citations, References, Co-Authors
 
 # Question 4
 
